@@ -88,6 +88,7 @@ class Process{
 
 class scheduling{
     public:
+
         void runFCFS(vector<Process> &processes){
             int currenttime = 0;
             int startTime = 0;
@@ -105,7 +106,57 @@ class scheduling{
                 currenttime = completionTime;
             }
 
+        }
 
+        void runSJN(vector<Process> &processes){
+
+            vector <bool> completed(processes.size(), false); // Used to check what process have been completed
+            int numbercompleted = 0;
+            int currenttime = 0;
+            int startTime = 0;
+            int completionTime = 0;
+            int waitingTime = 0;
+            int turnaroundTime = 0;
+            
+
+            while(numbercompleted != processes.size()){
+                int minburstime = 1000000;
+                int selecetedindex = -1;
+                int nextArrival = 10000000;
+                for(int i = 0; i < processes.size(); i++){
+                    if(processes[i].getarrivalTime() <= currenttime && completed[i] == false){
+                       if(processes[i].getburstTime() < minburstime){
+                                minburstime = processes[i].getburstTime();
+                                selecetedindex = i;
+                            }
+                        }
+                }
+                if(selecetedindex == -1){
+                    for(int i = 0; i < processes.size(); i++){
+                        if(completed[i] == false){
+                             nextArrival = min(processes[i].getarrivalTime(),nextArrival);
+                        }
+                    }
+                    currenttime = nextArrival;
+
+
+                } else{
+                    startTime = max(processes[selecetedindex].getarrivalTime(),currenttime);
+                    completionTime = startTime + processes[selecetedindex].getburstTime();
+                    waitingTime = startTime - processes[selecetedindex].getarrivalTime();
+                    turnaroundTime = completionTime - processes[selecetedindex].getarrivalTime();
+
+                    processes[selecetedindex].setschedulingResults(startTime,completionTime,waitingTime,turnaroundTime);
+                    currenttime = completionTime;
+
+                    numbercompleted+= 1;
+
+                    completed[selecetedindex] = true;
+
+                }
+
+
+            }
 
         }
 
@@ -126,9 +177,10 @@ class scheduling{
                 waitingTimesum += processes[i].getwaitingTime();
                 turnaroundTimesum += processes[i].getturnaroundTime();
             }
-
-            cout<< "Average Waiting time: "<< waitingTimesum / processes.size() << endl;
-            cout<< "Average Turnaround time: "<< turnaroundTimesum / processes.size() << endl;
+            double averagewaitingTime = static_cast<double>(waitingTimesum) / processes.size();
+            double averageturnaroundTime = static_cast<double> (turnaroundTimesum)/ processes.size();
+            cout<< "Average Waiting time: "<< averagewaitingTime << endl;
+            cout<< "Average Turnaround time: "<< averageturnaroundTime << endl;
 
 
         }
