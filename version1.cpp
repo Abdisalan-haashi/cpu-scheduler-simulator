@@ -161,10 +161,26 @@ class scheduling{
         }
 
         void displayGanttChart(vector<Process> &processes){
+            vector<Process> sortedProcesses = processes;
+            
+            for(int i = 0; i < sortedProcesses.size(); i++){
+                int minstatTime = sortedProcesses[i].getstartTime();
+                int selectedIndex = i;
+                for(int j = i+1; j < sortedProcesses.size(); j++){
+                    if(sortedProcesses[j].getstartTime() < minstatTime){
+                        selectedIndex = j;
+                        minstatTime = sortedProcesses[j].getstartTime();
+                    }
+                }
 
-            for(int i = 0; i < processes.size(); i++){
-                cout<< "P" << processes[i].getprocessID()<< ": " << processes[i].getstartTime() << "-" << processes[i].getcompletionTime() << endl;
+                swap(sortedProcesses[i],sortedProcesses[selectedIndex]);
+                
             }
+
+            for(int i = 0; i < sortedProcesses.size(); i++){
+                cout<<"| P"<< sortedProcesses[i].getprocessID() << " ";
+            }
+            cout<<"|"<< endl;
         }
 
                 
@@ -202,6 +218,8 @@ int main(){
     
     int ans = 0;
 
+    int algo = 0;
+
     while(true){
         cout<<"Enter a processID: ";
         cin>> processID;
@@ -213,6 +231,9 @@ int main(){
         cout<<"Would you like to continue: Yes 1 /No 0: ";
         cin>>ans;
         if(ans == 0){
+            cout<<"What algorithm do you want to use? " << endl;
+            cout<<"Press 1 for FCFS or 2 for SJN: ";
+            cin>> algo;
             break;
         }else if (ans == 1)
         {
@@ -222,7 +243,18 @@ int main(){
     }
 
     scheduling scheduler;
-    scheduler.runFCFS(processes);
+
+    if(algo == 1){
+        scheduler.runFCFS(processes);
+    } else if (algo == 2)
+    {
+        scheduler.runSJN(processes);
+    } else{
+        cout<<"Invalid algorithm input! " << endl;
+        
+    }
+    
+    
     
 
     scheduler.displayGanttChart(processes);
