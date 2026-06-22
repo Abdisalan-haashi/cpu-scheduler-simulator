@@ -12,6 +12,8 @@ A C++ CPU scheduling simulator implementing the First Come First Served (FCFS) s
 * Turnaround Time calculation
 * Average WT and TAT calculation
 * Gantt chart visualization
+* SJN scheduling
+* Round Robin scheduling
 
 ## Technologies
 
@@ -31,7 +33,6 @@ The project was developed using a structured software engineering approach:
 
 ## Future Improvements
 
-* Shortest Job First (SJF)
 * Priority Scheduling
-* Round Robin Scheduling
+
 

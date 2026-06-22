@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <queue>
 using namespace std;
 
 
@@ -87,6 +88,17 @@ class Process{
 };
 
 class scheduling{
+    private:
+        struct ganttEntry
+        {
+            int processID;
+            int startTime;
+            int completionTime;
+        };
+
+        vector<ganttEntry> ganttEntries;
+
+        
     public:
 
         void runFCFS(vector<Process> &processes){
@@ -95,13 +107,19 @@ class scheduling{
             int completionTime = 0;
             int waitingTime = 0;
             int turnaroundTime = 0;
-
+            ganttEntries.clear();
+            ganttEntry entry;
             for(int i = 0; i < processes.size(); i++){
                 startTime = max(processes[i].getarrivalTime(),currenttime);
                 completionTime = startTime + processes[i].getburstTime();
                 waitingTime = startTime - processes[i].getarrivalTime();
                 turnaroundTime = completionTime - processes[i].getarrivalTime();
 
+                entry.processID = processes[i].getprocessID(); // gantt chart entries 
+                entry.startTime = startTime;
+                entry.completionTime = completionTime;
+
+                ganttEntries.push_back(entry);
                 processes[i].setschedulingResults(startTime, completionTime, waitingTime, turnaroundTime);
                 currenttime = completionTime;
             }
@@ -111,13 +129,10 @@ class scheduling{
         void runSJN(vector<Process> &processes){
 
             vector <bool> completed(processes.size(), false); // Used to check what process have been completed
-            int numbercompleted = 0;
             int currenttime = 0;
-            int startTime = 0;
-            int completionTime = 0;
-            int waitingTime = 0;
-            int turnaroundTime = 0;
-            
+            int numbercompleted = 0;
+            ganttEntries.clear();
+            ganttEntry entry;
 
             while(numbercompleted != processes.size()){
                 int minburstime = 1000000;
@@ -131,7 +146,7 @@ class scheduling{
                             }
                         }
                 }
-                if(selecetedindex == -1){
+                if(selecetedindex == -1){ // jumping to the next arrival if no proceeses have arrived yet
                     for(int i = 0; i < processes.size(); i++){
                         if(completed[i] == false){
                              nextArrival = min(processes[i].getarrivalTime(),nextArrival);
@@ -141,10 +156,15 @@ class scheduling{
 
 
                 } else{
-                    startTime = max(processes[selecetedindex].getarrivalTime(),currenttime);
-                    completionTime = startTime + processes[selecetedindex].getburstTime();
-                    waitingTime = startTime - processes[selecetedindex].getarrivalTime();
-                    turnaroundTime = completionTime - processes[selecetedindex].getarrivalTime();
+                    int startTime = max(processes[selecetedindex].getarrivalTime(),currenttime);
+                    int completionTime = startTime + processes[selecetedindex].getburstTime();
+                    int waitingTime = startTime - processes[selecetedindex].getarrivalTime();
+                    int turnaroundTime = completionTime - processes[selecetedindex].getarrivalTime();
+
+                    entry.processID = processes[selecetedindex].getprocessID(); // collecting entries
+                    entry.startTime = startTime;
+                    entry.completionTime = completionTime;
+                    ganttEntries.push_back(entry);
 
                     processes[selecetedindex].setschedulingResults(startTime,completionTime,waitingTime,turnaroundTime);
                     currenttime = completionTime;
@@ -160,27 +180,113 @@ class scheduling{
 
         }
 
-        void displayGanttChart(vector<Process> &processes){
-            vector<Process> sortedProcesses = processes;
+        void displayGanttChart(){
             
-            for(int i = 0; i < sortedProcesses.size(); i++){
-                int minstatTime = sortedProcesses[i].getstartTime();
-                int selectedIndex = i;
-                for(int j = i+1; j < sortedProcesses.size(); j++){
-                    if(sortedProcesses[j].getstartTime() < minstatTime){
-                        selectedIndex = j;
-                        minstatTime = sortedProcesses[j].getstartTime();
+
+
+            for(const auto &entry: ganttEntries){
+                cout<<"P"<< entry.processID;
+                cout<<": ";
+                cout<<entry.startTime;
+                cout<<"-";
+                cout<< entry.completionTime << endl;
+                
+            }
+            
+
+        }
+
+
+
+        void runRoundRobin(vector<Process> &processes, int timeQuantum){
+            vector<int> remainingBurstTime(processes.size());
+            int currentTime = 0;
+            vector<bool> addedToQueue(processes.size(), false);
+            queue<int> readyQueue;
+            int numberCompleted = 0;
+            vector<bool> hasStarted(processes.size(), false); // This vector will help us keep track of whether a process has started execution or not.
+            int startTime = 0;
+            ganttEntries.clear();
+            ganttEntry entry;
+            for(int i = 0; i < processes.size(); i++){ // We initialize the burst time of each process and store it in the vector remainingBurstTime. This will help us keep track of how much burst time is left for each process.
+                remainingBurstTime[i] = processes[i].getburstTime();
+            }
+
+            while(numberCompleted != processes.size()){
+                for(int i = 0; i < processes.size(); i++){
+                    if(processes[i].getarrivalTime() <= currentTime && addedToQueue[i] == false){
+                        readyQueue.push(i);
+                        addedToQueue[i] = true;
+                    }
+
+                }
+
+                if(readyQueue.empty()){ // If the ready queue is empty, we need to find the next process that will arrive and update the current time accordingly.
+                    int nextArrival = 10000000;
+                    for(int i = 0; i < processes.size(); i++){
+                        if(addedToQueue[i] == false){
+                            nextArrival = min(nextArrival, processes[i].getarrivalTime());
+                        }
+                    }
+                    currentTime = nextArrival;
+                    continue; // We continue to the next iteration of the while loop to check if any new processes have arrived.
+                }
+
+                int currentIndex = readyQueue.front();
+                readyQueue.pop();
+
+                if(hasStarted[currentIndex] == false){
+                    startTime = currentTime;
+                    hasStarted[currentIndex] = true;
+                }
+                entry.startTime = currentTime; // start time before execution 
+                int executionTime = min(timeQuantum, remainingBurstTime[currentIndex]);
+                currentTime += executionTime;
+                remainingBurstTime[currentIndex] -= executionTime;
+                entry.completionTime = currentTime; // completion time after execution
+                entry.processID = processes[currentIndex].getprocessID();
+
+                ganttEntries.push_back(entry); 
+
+
+                for(int i = 0; i < processes.size(); i++){ // adding new processes to the queue that arrived during execution
+                    if(processes[i].getarrivalTime() <= currentTime && addedToQueue[i] == false){
+                        readyQueue.push(i);
+                        addedToQueue[i] = true;
                     }
                 }
 
-                swap(sortedProcesses[i],sortedProcesses[selectedIndex]);
+                if(remainingBurstTime[currentIndex] > 0){
+                    readyQueue.push(currentIndex); // pushing the current process back into the queue if it still has remaining burst time.
+                } else {
+                    int completionTime = startTime + processes[currentIndex].getburstTime();
+                    int waitingTime = startTime - processes[currentIndex].getarrivalTime();
+                    int turnaroundTime = completionTime - processes[currentIndex].getarrivalTime();
+
+                    processes[currentIndex].setschedulingResults(startTime, completionTime, waitingTime, turnaroundTime);
+                    currentTime = completionTime; 
+
+                    numberCompleted += 1; // we only need this to keep track of the number of processes have been completed 
+
+                    
+
+                }
+
+
+
+
+
+
+
+
                 
+
+
+
+
             }
 
-            for(int i = 0; i < sortedProcesses.size(); i++){
-                cout<<"| P"<< sortedProcesses[i].getprocessID() << " ";
-            }
-            cout<<"|"<< endl;
+
         }
 
                 
@@ -232,7 +338,7 @@ int main(){
         cin>>ans;
         if(ans == 0){
             cout<<"What algorithm do you want to use? " << endl;
-            cout<<"Press 1 for FCFS or 2 for SJN: ";
+            cout<<"Press 1 for FCFS or 2 for SJN or 3 for Round Robin: ";
             cin>> algo;
             break;
         }else if (ans == 1)
@@ -244,20 +350,28 @@ int main(){
 
     scheduling scheduler;
 
-    if(algo == 1){
-        scheduler.runFCFS(processes);
-    } else if (algo == 2)
-    {
-        scheduler.runSJN(processes);
-    } else{
-        cout<<"Invalid algorithm input! " << endl;
-        
+
+
+    switch(algo) {
+        case 1:
+            scheduler.runFCFS(processes);
+            break;
+        case 2:
+            scheduler.runSJN(processes);
+            break;
+        case 3:
+            scheduler.runRoundRobin(processes,3);
+            break;
+        default:
+            cout<<"Invalid algorithm input! " << endl;
+
     }
+   
     
     
     
 
-    scheduler.displayGanttChart(processes);
+    scheduler.displayGanttChart();
 
     scheduler.calculateAverages(processes);
 
