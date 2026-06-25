@@ -13,6 +13,7 @@ class Process{
         int completionTime;
         int waitingTime;
         int turnaroundTime;
+        int priority;
     
     public:
         Process(){
@@ -22,8 +23,9 @@ class Process{
             completionTime = 0;
             waitingTime = 0;
             turnaroundTime = 0;
+            priority = 0;
         }
-        Process(int MyprocessID, int MyarrivalTime, int MyburstTime){
+        Process(int MyprocessID, int MyarrivalTime, int MyburstTime, int Mypriority = 0){
             processID = MyprocessID;
             arrivalTime = MyarrivalTime;
             burstTime = MyburstTime;
@@ -31,6 +33,7 @@ class Process{
             completionTime = 0;
             waitingTime = 0;
             turnaroundTime = 0;
+            priority = Mypriority;
 
         }
 
@@ -60,6 +63,10 @@ class Process{
 
         int getturnaroundTime(){
             return turnaroundTime;
+        }
+
+        int getpriority(){
+            return priority;
         }
 
         void setschedulingResults(int MystartTime, int MycompletionTime, int MywaitingTime, 
@@ -199,6 +206,7 @@ class scheduling{
 
 
         void runRoundRobin(vector<Process> &processes, int timeQuantum){
+
             vector<int> remainingBurstTime(processes.size());
             int currentTime = 0;
             vector<bool> addedToQueue(processes.size(), false);
@@ -273,23 +281,67 @@ class scheduling{
                 }
 
 
-
-
-
-
-
-
-                
-
-
-
-
             }
+
+        }
+
+
+        void runPriority(vector<Process> &processes){
+            vector <bool> completed(processes.size(), false); // pre set them all to false 
+            int numbercompleted = 0;
+            int currenttime = 0;
+            ganttEntries.clear();
+            ganttEntry entry;
+
+            while(numbercompleted != processes.size()){
+                int highestpriority = -1; // bigger numbers higher priority
+                int selectedindex = -1;
+                int nextarrivaltime = 10000;
+                for(int i = 0; i < processes.size(); i++){
+                    if(processes[i].getarrivalTime() <= currenttime && completed[i] == false){
+                        if(processes[i].getpriority() > highestpriority){
+                            highestpriority = max(highestpriority,processes[i].getpriority()); // keeping track of the processes with the highest priority
+                            selectedindex = i; // and its index
+                        }
+                       
+                    }
+                    
+                }
+
+                if(selectedindex == -1){
+                    for(int i = 0; i < processes.size(); i++){
+                        if(completed[i] == false){
+                            nextarrivaltime = min(nextarrivaltime,processes[i].getarrivalTime());
+                        }
+                    }
+                    currenttime = nextarrivaltime;
+
+                } else{
+                    int startTime = max(processes[selectedindex].getarrivalTime(),currenttime);
+                    int completionTime = startTime + processes[selectedindex].getburstTime();
+                    int waitingTime = startTime - processes[selectedindex].getarrivalTime();
+                    int turnaroundTime = completionTime - processes[selectedindex].getarrivalTime();
+
+                    entry.processID = processes[selectedindex].getprocessID(); // updating gantt entry fields
+                    entry.startTime = startTime;
+                    entry.completionTime = completionTime;
+
+                    ganttEntries.push_back(entry);
+
+                    processes[selectedindex].setschedulingResults(startTime,completionTime,waitingTime,turnaroundTime);
+                    currenttime = completionTime;
+
+                    numbercompleted += 1;
+
+                }
+            }
+
 
 
         }
 
-                
+
+
 
         void calculateAverages(vector<Process> &processes){
             int waitingTimesum = 0;
@@ -320,30 +372,52 @@ int main(){
     int processID;
     int arrivalTime;
     int BurstTime;
+    int priority;
 
     
     int ans = 0;
 
     int algo = 0;
 
+    cout<<"What algorithm do you want to use? " << endl;
+    cout<<"Press 1 for FCFS or 2 for SJN 3 for Round Robin or 4 for Priority: ";
+    cin>> algo;
+
+    
     while(true){
-        cout<<"Enter a processID: ";
-        cin>> processID;
-        cout<<"Enter a Arrival Time: ";
-        cin>> arrivalTime;
-        cout<<"Enter a Burst Time: ";
-        cin>> BurstTime;
-        processes.push_back(Process(processID,arrivalTime,BurstTime));
-        cout<<"Would you like to continue: Yes 1 /No 0: ";
-        cin>>ans;
-        if(ans == 0){
-            cout<<"What algorithm do you want to use? " << endl;
-            cout<<"Press 1 for FCFS or 2 for SJN or 3 for Round Robin: ";
-            cin>> algo;
-            break;
-        }else if (ans == 1)
-        {
-            continue;
+        if(algo == 4){
+            cout<<"Enter a processID: ";
+            cin>> processID;
+            cout<<"Enter a Arrival Time: ";
+            cin>> arrivalTime;
+            cout<<"Enter a Burst Time: ";
+            cin>> BurstTime;
+            cout<<"Enter the Priority: ";
+            cin>> priority;
+            processes.push_back(Process(processID,arrivalTime,BurstTime,priority));
+            cout<<"Would you like to continue: Yes 1 /No 0: ";
+            cin>>ans;
+            if(ans == 0){
+                break;
+            } else{
+                continue;
+            }
+
+        } else{
+            cout<<"Enter a processID: ";
+            cin>> processID;
+            cout<<"Enter a Arrival Time: ";
+            cin>> arrivalTime;
+            cout<<"Enter a Burst Time: ";
+            cin>> BurstTime;
+            processes.push_back(Process(processID,arrivalTime,BurstTime));
+            cout<<"Would you like to continue: Yes 1 /No 0: ";
+            cin>>ans;
+            if(ans == 0){
+                break;
+            } else{
+                continue;
+            }
         }
         
     }
@@ -361,6 +435,9 @@ int main(){
             break;
         case 3:
             scheduler.runRoundRobin(processes,3);
+            break;
+        case 4:
+            scheduler.runPriority(processes);
             break;
         default:
             cout<<"Invalid algorithm input! " << endl;
